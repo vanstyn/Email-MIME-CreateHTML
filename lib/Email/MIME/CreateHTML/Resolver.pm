@@ -9,6 +9,7 @@ package Email::MIME::CreateHTML::Resolver;
 
 use strict;
 use Carp;
+use Scalar::Util ();
 
 use vars qw($VERSION $HaveCache $HaveLWP $HaveFilesystem);
 $VERSION = sprintf "%d.%03d", q$Revision: 1.5 $ =~ /: (\d+)\.(\d+)/;
@@ -43,13 +44,13 @@ sub new {
 	#Do some sanity checking of inputs
 	my $resolver = $args->{resolver};
 	if(defined $resolver) {
-		confess "resolver must be an object" unless ( UNIVERSAL::isa($resolver,'UNIVERSAL') );
+		confess "resolver must be an object" unless Scalar::Util::blessed($resolver);
 		confess "resolver does not seem to use the expected interface (get_resource)" unless ($resolver->can('get_resource'));
 	}
 
 	my $object_cache = $args->{'object_cache'};
 	if(defined $object_cache ) {
-		confess "object_cache must be an object" unless ( UNIVERSAL::isa($object_cache,'UNIVERSAL') );
+		confess "object_cache must be an object" unless Scalar::Util::blessed($object_cache);
 		confess "object_cache does not seem to use the expected cache interface (get and set methods)" 
 			unless ($object_cache->can('get') && $object_cache->can('set'));
 		warn("Caching support is not available - object_cache will not be used") unless($HaveCache);
