@@ -1,0 +1,26 @@
+Changes
+COPYING
+Makefile.PL
+MANIFEST
+MANIFEST.SKIP
+README
+lib/Email/MIME/CreateHTML.pm
+lib/Email/MIME/CreateHTML/Resolver.pm
+lib/Email/MIME/CreateHTML/Resolver/LWP.pm
+lib/Email/MIME/CreateHTML/Resolver/Filesystem.pm
+lib/Email/MIME/CreateHTML/Resolver/Cached.pm
+t/Email-MIME-CreateHTML.t
+t/Email-MIME-CreateHTML-Resolver.t
+t/data/CreateHTML_01.html
+t/data/CreateHTML_02a.html
+t/data/CreateHTML_02b.html
+t/data/CreateHTML_03a.html
+t/data/CreateHTML_03b.html
+t/data/CreateHTML_04a.html
+t/data/CreateHTML_04b.html
+t/data/end.png
+t/data/landscape.jpg
+t/data/test_style.css
+t/pod.t
+t/pod_coverage.t
+META.yml                                 Module meta-data (added by MakeMaker)
