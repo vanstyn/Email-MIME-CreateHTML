@@ -1,3 +1,8 @@
+Wed Feb 10 13:33:01 2010 - 1.029
+    Add Carp to fix warnings (CPAN RT51208)
+    Insist on 3.15 of HTML::TokeParser::Simple (CPAN RT 28788)
+    POD Syntax fix
+
 Thu Oct 26 10:25:31 2006 - 1.026
     * General bug-avoidance changes
     * Update for PEP website

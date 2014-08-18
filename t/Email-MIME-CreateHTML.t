@@ -8,7 +8,7 @@
 
 use strict;
 use vars qw/$opt_m/;
-use Test::Assertions::TestScript(tests => 48, options => {'m=s' => \$opt_m});
+use Test::Assertions::TestScript(tests => 49, options => {'m=s' => \$opt_m});
 use File::Slurp;
 use File::Copy;
 
@@ -90,7 +90,7 @@ $mime = Email::MIME->create_html(
 	],
 	body => $html_in,
 	objects => {
-		'123' => './data/end.png',
+		'123@bbc.co.uk' => './data/end.png',
 		'landscapeview' => './data/landscape.jpg',
 	},
 	inline_css => 0,
@@ -103,11 +103,10 @@ test_mime( $mime, qr'multipart/related', undef );
 @parts = $mime->parts;
 ASSERT( scalar(@parts) == 3, "number of parts");
 test_mime( $parts[0], qr'text/html', $html_out );
-my $p = $parts[1]->content_type . $parts[2]->content_type;
+my $p = join '', map defined $_ ? $_->content_type : '', @parts[1..2];
 ASSERT($p =~ m|image/png|i && $p =~ m|image/jpeg|i, "Mime types image/png and image/jpeg");
 
 send_mail( $mime ) if($opt_m);
-
 
 # HTML with embedded objects, with text alternative
 # using embedded images
@@ -128,7 +127,7 @@ $mime = Email::MIME->create_html(
 	text_body => $text_body,
 	base => './data',
 	objects => {
-		'123' => 'end.png',
+		'123@bbc.co.uk' => 'end.png',
 	},
 	inline_javascript => 1,
 );
@@ -142,11 +141,13 @@ ASSERT( scalar(@parts) == 2, "number of parts");
 test_mime( $parts[0], qr'text/plain', $text_body );
 test_mime( $parts[1], qr'multipart/related', undef );
 
-my @sub_parts = $parts[1]->parts;
+my @sub_parts = defined $parts[1] ? $parts[1]->parts : ();
 ASSERT( scalar(@sub_parts) == 3, "number of parts");
 test_mime( $sub_parts[0], qr'text/html', $html_out );
-my $sp = $sub_parts[1]->content_type . $sub_parts[2]->content_type;
-ASSERT($sp =~ m|image/png|i && $sp =~ m|image/jpeg|i, "Mime types image/png and image/jpeg");
+my $sp = [map { defined($_) ? $_->content_type : () } @sub_parts[1..2]];
+DUMP("Sub parts",$sp);
+ASSERT((grep { m!image/png!i } @$sp), "MIME type image/png present");
+ASSERT((grep { m!image/jpeg!i } @$sp), "MIME type image/jpeg present");
 
 send_mail( $mime ) if($opt_m);
 
@@ -202,7 +203,7 @@ eval {
 		body => $html_in,
 		base => './data',
 		objects => {
-			'end_image' => 'cache_test_end.png',
+			'abcdefghi@bbc.co.uk' => 'cache_test_end.png',
 		},
 		object_cache => $cache,
 	);
@@ -219,7 +220,7 @@ $mime = Email::MIME->create_html(
 	body => $html_in,
 	base => './data',
 	objects => {
-		'end_image' => 'cache_test_end.png',
+		'abcdefghi@bbc.co.uk' => 'cache_test_end.png',
 	},
 	object_cache => $cache,
 );
@@ -239,7 +240,7 @@ $mime = Email::MIME->create_html(
 	body => $html_in,
 	base => './data',
 	objects => {
-		'end_image' => 'cache_test_end.png',
+		'abcdefghi@bbc.co.uk' => 'cache_test_end.png',
 	},
 	object_cache => $cache,
 );
@@ -262,36 +263,44 @@ send_mail( $mime ) if($opt_m);
 sub test_mime {
 	my ($mime, $exp_content_type, $exp_body) = @_;
 
-	my $got_content_type = $mime->content_type;
-	ASSERT( $got_content_type =~ /^$exp_content_type/i, "content-type: $got_content_type");
+	my $got_content_type = defined $mime ? $mime->content_type : undef;
+	ASSERT( defined $got_content_type && $got_content_type =~ /^$exp_content_type/i, "content-type: $got_content_type");
 
 	if ( defined $exp_body ) {
-		my $got_body = $mime->body;
-		# we don't care about trailing white space
-		$got_body =~ s/\s+$//g;
+		my $got_body;
+
 		$exp_body =~ s/\s+$//g;
-		# This is a quick fix to allow us to test against randomly generated cids
-		# note that the 10 is because the existing tests had some short all numeric cids
-		$got_body =~ s/cid:\d{10}\d+/cid:/g;
-		TRACE("EXPECTED:\n==========\n".$exp_body."\n==========\n");
-		TRACE("GOT:\n==========\n".$got_body."\n==========\n");
-		ASSERT($got_body eq $exp_body, "body");
+
+		if(defined $mime) {
+		    $got_body = $mime->body;
+			# we don't care about trailing white space
+	 	    $got_body =~ s/\s+$//g;
+			# This is a quick fix to allow us to test against randomly generated cids
+			# note that the 10 is because the existing tests had some short all numeric cids
+			$got_body =~ s/cid:\d{10}\d+/cid:/g;
+		}
+		DUMP("test_mime", { expected => $exp_body, got => $got_body });
+		ASSERT(defined $got_body && $got_body eq $exp_body, "body");
 	}
 }
 
 # Actually send the mail
 sub send_mail {
 	my $email = shift;
-	unless ($ENV{SMTP_HOST}) {
-		warn "You need to define the SMTP_HOST env var to send emails";
-		return;
-	}
-
+	my $smtp_host = $ENV{SMTP_HOST} || 'localhost';
+	warn "SMTP_HOST env var not set in environment using 'localhost'\n" unless ($ENV{SMTP_HOST});
 	require Email::Send;
 	warn "Sending email to '$mailto'...\n";
-	my $sender = Email::Send->new({mailer => 'SMTP'});
-	$sender->mailer_args([Host => $ENV{SMTP_HOST}]);
-	$sender->send($email);
+	if ( $Email::Send::VERSION < 2.0 ) {
+		my $rv = Email::Send::send('SMTP',$email, $smtp_host);
+		die $rv if ! $rv;
+	}
+	else {
+		my $sender = Email::Send->new({mailer => 'SMTP'});
+		$sender->mailer_args([Host => $smtp_host]);
+		my $rv = $sender->send($email);
+		die $rv if ! $rv;
+	}
 }
 
 #######################################################

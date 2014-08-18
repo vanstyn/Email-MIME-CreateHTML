@@ -1,7 +1,7 @@
 # http://module-build.sourceforge.net/META-spec.html
 #XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
 name:         Email-MIME-CreateHTML
-version:      1.026
+version:      1.029
 version_from: lib/Email/MIME/CreateHTML.pm
 installdirs:  site
 requires:
@@ -9,11 +9,11 @@ requires:
     Email::MIME::Creator:          0
     File::Slurp::WithinPolicy:     0
     HTML::Tagset:                  0
-    HTML::TokeParser::Simple:      0
+    HTML::TokeParser::Simple:      3.15
     Log::Trace:                    0
     MIME::Types:                   0
     Test::Assertions:              0
     Test::Assertions::TestScript:  0
 
 distribution_type: module
-generated_by: ExtUtils::MakeMaker version 6.17
+generated_by: ExtUtils::MakeMaker version 6.30

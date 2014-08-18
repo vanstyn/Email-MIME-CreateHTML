@@ -2,7 +2,7 @@
 # Purpose : Build HTML emails
 # Author  : Tony Hennessy
 # Created : Aug 2006
-# CVS     : $Header: /home/cvs/software/cvsroot/email/lib/Email/MIME/CreateHTML.pm,v 1.26 2006/08/24 21:41:37 johna Exp $
+# CVS     : $Header: /home/cvs/software/cvsroot/email/lib/Email/MIME/CreateHTML.pm,v 1.29 2010/01/12 11:26:38 jamiel Exp $
 ###############################################################################
 
 package Email::MIME::CreateHTML;
@@ -18,7 +18,7 @@ use Email::MIME::CreateHTML::Resolver;
 
 #Globals
 use vars qw($VERSION %EMBED @EXPORT_OK @ISA);
-$VERSION = sprintf "%d.%03d", q$Revision: 1.26 $ =~ /: (\d+)\.(\d+)/;
+$VERSION = sprintf "%d.%03d", q$Revision: 1.29 $ =~ /: (\d+)\.(\d+)/;
 %EMBED = (
 	'bgsound' => {'src'=>1},
 	'body'    => {'background'=>1},
@@ -194,6 +194,7 @@ sub build_html_email {
 package Email::MIME;
 
 use strict;
+use Carp;
 use Email::MIME::Creator;
 
 sub create_html {
@@ -391,15 +392,17 @@ The set of elements that you want to be embedded.  Defaults to the C<%Email::MIM
 This should be a data structure of the form:
 
 	embed_elements => {
-		$elementname => {$attrname => $boolean}	
+		$elementname_1 => {$attrname_1 => $boolean_1},
+		$elementname_2 => {$attrname_2 => $boolean_2},
+		...
 	}
 
-i.e. resource will be embedded if C<$params->{embed_elements}{$element}{$attr}> is true.
+i.e. resource will be embedded if C<$embed_elements-E<gt>{$elementname}-E<gt>{$attrname}> is true.
 
 =item resolver =E<gt> I<object>
 
-If a resolver is supplied this will be used to fetch the resources that are embedded as MIME objects in the email.  If no resolver is given the default behaviour is to use the Email::MIME::CreateHTML::Resolver::BestAvailable resolver to read $uri with any $base value prefixed.
-Resources fetched using the resolver will be cached if an object_cache is supplied.
+If a resolver is supplied this will be used to fetch the resources that are embedded as MIME objects in the email.  If no resolver is given the default behaviour is to choose the best available resolver to read C<$uri> with any C<$base> value prefixed.
+Resources fetched using the resolver will be cached if an C<object_cache> is supplied.
 
 =item base =E<gt> I<scalar>
 
@@ -420,9 +423,9 @@ Some mail clients will only interpret css if it is inlined.
 
 =item objects =E<gt> I<hash reference>
 
-A reference to a hash of external objects. Keys are Content Ids (only letters, numbers and underscores allowed), 
+A reference to a hash of external objects. Keys are Content Ids
 and the values are filepaths or URIs used to fetch the resource with the resolver. We use C<MIME::Types> to derive the type from the 
-file extension. For example in an HTML mail you would use the file keyed on '123' like C<E<lt>img src="cid:123" alt="a test" width="20" height="20" /E<gt>>
+file extension. For example in an HTML mail you would use the file keyed on '12345678@bbc.co.uk' like C<E<lt>img src="cid:12345678@bbc.co.uk" alt="a test" width="20" height="20" /E<gt>>
 
 =item object_cache =E<gt> I<cache object>
 
@@ -515,14 +518,14 @@ and then pass in a set of objects to associate with those Content IDs:
 
 	my $html = qq{
 		<html><head><title>My Document</title></head><body>
-			<p>Here is a picture:</p><img src="cid:image1">
+			<p>Here is a picture:</p><img src="cid:some_image_jpg@bbc.co.uk">
 		</body></html>	
 	};
 
 You then need to create a mapping of the Content IDs to object filenames:
 	
 	my %objects = (
-		"image1" => "/var/html/some_image.jpg"
+		"some_image_jpg@bbc.co.uk" => "/var/html/some_image.jpg"
 	);
 
 Finally you need to disable both the C<embed> and C<inline_css> options to turn off HTML parsing, and pass in your mapping: 
@@ -658,7 +661,7 @@ Alternatively you can roll your own.  You just need to define an object with get
 		
 =head1 SEE ALSO
 
-L<Perl Email Project|http://pep.pobox.com>
+Perl Email Project L<http://pep.pobox.com>
 
 L<Email::Simple>, L<Email::MIME>, L<Email::Send>, L<Email::MIME::Creator>
 
@@ -668,7 +671,7 @@ L<Email::Simple>, L<Email::MIME>, L<Email::Send>, L<Email::MIME::Creator>
 
 =head1 VERSION
 
-$Revision: 1.26 $ on $Date: 2006/08/24 21:41:37 $ by $Author: johna $
+$Revision: 1.29 $ on $Date: 2010/01/12 11:26:38 $ by $Author: jamiel $
 
 =head1 AUTHOR
 

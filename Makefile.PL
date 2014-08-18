@@ -8,7 +8,7 @@ WriteMakefile(
                 Test::Assertions => 0,
                 Test::Assertions::TestScript => 0,
                 Email::MIME::Creator => 0,
-                HTML::TokeParser::Simple => 0,
+                HTML::TokeParser::Simple => 3.15,
                 HTML::Tagset => 0,
                 File::Slurp::WithinPolicy => 0,
                 MIME::Types => 0,
