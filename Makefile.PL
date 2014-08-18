@@ -16,4 +16,6 @@ WriteMakefile(
                            },
               ABSTRACT_FROM => 'lib/Email/MIME/CreateHTML.pm',
               AUTHOR        => 'British Broadcasting Corporation',
+              # We don't want to add to Email::MIME's docs, and don't have permission to anyway.
+              META_ADD      => { no_index => { package => ['Email::MIME'] } },
              );

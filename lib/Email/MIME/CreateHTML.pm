@@ -2,7 +2,7 @@
 # Purpose : Build HTML emails
 # Author  : Tony Hennessy
 # Created : Aug 2006
-# CVS     : $Header: /home/cvs/software/cvsroot/email/lib/Email/MIME/CreateHTML.pm,v 1.29 2010/01/12 11:26:38 jamiel Exp $
+# CVS     : $Header: /home/cvs/software/cvsroot/email/lib/Email/MIME/CreateHTML.pm,v 1.30 2010/02/12 17:44:26 jamiel Exp $
 ###############################################################################
 
 package Email::MIME::CreateHTML;
@@ -18,7 +18,7 @@ use Email::MIME::CreateHTML::Resolver;
 
 #Globals
 use vars qw($VERSION %EMBED @EXPORT_OK @ISA);
-$VERSION = sprintf "%d.%03d", q$Revision: 1.29 $ =~ /: (\d+)\.(\d+)/;
+$VERSION = sprintf "%d.%03d", q$Revision: 1.30 $ =~ /: (\d+)\.(\d+)/;
 %EMBED = (
 	'bgsound' => {'src'=>1},
 	'body'    => {'background'=>1},
@@ -666,12 +666,12 @@ Perl Email Project L<http://pep.pobox.com>
 L<Email::Simple>, L<Email::MIME>, L<Email::Send>, L<Email::MIME::Creator>
 
 =head1 TODO
- 
- - Maybe add option to control the order that the text + html parts appear in the MIME message. 
+
+Maybe add option to control the order that the text + html parts appear in the MIME message. 
 
 =head1 VERSION
 
-$Revision: 1.29 $ on $Date: 2010/01/12 11:26:38 $ by $Author: jamiel $
+$Revision: 1.30 $ on $Date: 2010/02/12 17:44:26 $ by $Author: jamiel $
 
 =head1 AUTHOR
 
