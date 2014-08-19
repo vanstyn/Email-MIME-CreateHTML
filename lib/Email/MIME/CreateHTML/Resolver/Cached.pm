@@ -10,7 +10,7 @@ use strict;
 use Data::Serializer;
 use URI::Escape;
 
-our $VERSION = '1.039';
+our $VERSION = '1.040';
 
 sub new {
 	my ($class, $args) = @_;	

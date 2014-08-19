@@ -11,7 +11,7 @@ use Carp;
 use MIME::Types;
 use LWP::UserAgent;
 
-our $VERSION = '1.039';
+our $VERSION = '1.040';
 
 sub new {
 	my ($class, $options) = @_;
