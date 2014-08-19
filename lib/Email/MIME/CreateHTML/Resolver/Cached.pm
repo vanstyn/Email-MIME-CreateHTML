@@ -2,7 +2,6 @@
 # Purpose : Apply caching to another resolver
 # Author  : John Alden
 # Created : Aug 2006
-# CVS     : $Header: /home/cvs/software/cvsroot/email/lib/Email/MIME/CreateHTML/Resolver/Cached.pm,v 1.4 2006/08/24 21:41:38 johna Exp $
 ###############################################################################
 
 package Email::MIME::CreateHTML::Resolver::Cached;
@@ -11,8 +10,7 @@ use strict;
 use Data::Serializer;
 use URI::Escape;
 
-use vars qw($VERSION);
-$VERSION = sprintf "%d.%03d", q$Revision: 1.4 $ =~ /: (\d+)\.(\d+)/;
+our $VERSION = '1.039';
 
 sub new {
 	my ($class, $args) = @_;	
@@ -87,13 +85,10 @@ Another resolver to apply caching to
 
 =back
 
-=head1 VERSION
-
-$Revision: 1.4 $ on $Date: 2006/08/24 21:41:38 $ by $Author: johna $
-
 =head1 AUTHOR
 
-Tony Hennessy, Simon Flack and John Alden
+Tony Hennessy, Simon Flack and John Alden with additional contributions by
+Ricardo Signes <rjbs@cpan.org> and Henry Van Styn <vanstyn@cpan.org>
 
 =head1 COPYRIGHT
 

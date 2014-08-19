@@ -2,7 +2,6 @@
 # Purpose : Load resources using LWP
 # Author  : John Alden
 # Created : Aug 2006
-# CVS     : $Header: /home/cvs/software/cvsroot/email/lib/Email/MIME/CreateHTML/Resolver/LWP.pm,v 1.7 2006/08/24 21:41:38 johna Exp $
 ###############################################################################
 
 package Email::MIME::CreateHTML::Resolver::LWP;
@@ -12,8 +11,7 @@ use Carp;
 use MIME::Types;
 use LWP::UserAgent;
 
-use vars qw($VERSION);
-$VERSION = sprintf "%d.%03d", q$Revision: 1.7 $ =~ /: (\d+)\.(\d+)/;
+our $VERSION = '1.039';
 
 sub new {
 	my ($class, $options) = @_;
@@ -119,13 +117,10 @@ Base URI to resolve URIs passed to get_resource.
 
 =back
 
-=head1 VERSION
-
-$Revision: 1.7 $ on $Date: 2006/08/24 21:41:38 $ by $Author: johna $
-
 =head1 AUTHOR
 
-Tony Hennessy, Simon Flack and John Alden
+Tony Hennessy, Simon Flack and John Alden with additional contributions by
+Ricardo Signes <rjbs@cpan.org> and Henry Van Styn <vanstyn@cpan.org>
 
 =head1 COPYRIGHT
 

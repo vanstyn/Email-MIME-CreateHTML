@@ -2,7 +2,6 @@
 # Purpose : Build HTML emails
 # Author  : Tony Hennessy
 # Created : Aug 2006
-# CVS     : $Header: /home/cvs/software/cvsroot/email/lib/Email/MIME/CreateHTML.pm,v 1.30 2010/02/12 17:44:26 jamiel Exp $
 ###############################################################################
 
 package Email::MIME::CreateHTML;
@@ -14,11 +13,12 @@ use Email::MIME;
 use HTML::TokeParser::Simple;
 use HTML::Tagset;
 
+our $VERSION = '1.039';
+
 use Email::MIME::CreateHTML::Resolver;
 
 #Globals
-use vars qw($VERSION %EMBED @EXPORT_OK @ISA);
-$VERSION = sprintf "%d.%03d", q$Revision: 1.30 $ =~ /: (\d+)\.(\d+)/;
+use vars qw(%EMBED @EXPORT_OK @ISA);
 %EMBED = (
 	'bgsound' => {'src'=>1},
 	'body'    => {'background'=>1},
@@ -669,13 +669,11 @@ L<Email::Simple>, L<Email::MIME>, L<Email::Send>, L<Email::MIME::Creator>
 
 Maybe add option to control the order that the text + html parts appear in the MIME message. 
 
-=head1 VERSION
-
-$Revision: 1.30 $ on $Date: 2010/02/12 17:44:26 $ by $Author: jamiel $
 
 =head1 AUTHOR
 
 Tony Hennessy and Simon Flack with cookbook + some refactoring by John Alden <cpan _at_ bbc _dot_ co _dot_ uk>
+with additional contributions by Ricardo Signes <rjbs@cpan.org> and Henry Van Styn <vanstyn@cpan.org>
 
 =head1 COPYRIGHT
 

@@ -2,7 +2,6 @@
 # Purpose : Load resources from the filesystem
 # Author  : John Alden
 # Created : Aug 2006
-# CVS     : $Header: /home/cvs/software/cvsroot/email/lib/Email/MIME/CreateHTML/Resolver/Filesystem.pm,v 1.6 2006/08/24 21:41:38 johna Exp $
 ###############################################################################
 
 package Email::MIME::CreateHTML::Resolver::Filesystem;
@@ -13,8 +12,7 @@ use File::Slurp::WithinPolicy 'read_file';
 use MIME::Types;
 use File::Spec;
 
-use vars qw($VERSION);
-$VERSION = sprintf "%d.%03d", q$Revision: 1.6 $ =~ /: (\d+)\.(\d+)/;
+our $VERSION = '1.039';
 
 sub new {
 	my ($class, $options) = @_;
@@ -84,13 +82,10 @@ Base directory used to resolve relative filepaths passed to get_resource.
 
  - Currently the MIME type is deduced from the file extension via MIME::Types; given we have the content available, more sophisticated strategies are probably possible
 
-=head1 VERSION
-
-$Revision: 1.6 $ on $Date: 2006/08/24 21:41:38 $ by $Author: johna $
-
 =head1 AUTHOR
 
-Tony Hennessy, Simon Flack and John Alden
+Tony Hennessy, Simon Flack and John Alden with additional contributions by
+Ricardo Signes <rjbs@cpan.org> and Henry Van Styn <vanstyn@cpan.org>
 
 =head1 COPYRIGHT
 

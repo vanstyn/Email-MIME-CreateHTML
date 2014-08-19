@@ -2,7 +2,6 @@
 # Purpose : Pick the most appropriate resolver
 # Author  : John Alden
 # Created : Aug 2006
-# CVS     : $Header: /home/cvs/software/cvsroot/email/lib/Email/MIME/CreateHTML/Resolver.pm,v 1.5 2006/08/24 21:41:38 johna Exp $
 ###############################################################################
 
 package Email::MIME::CreateHTML::Resolver;
@@ -11,8 +10,9 @@ use strict;
 use Carp;
 use Scalar::Util ();
 
-use vars qw($VERSION $HaveCache $HaveLWP $HaveFilesystem);
-$VERSION = sprintf "%d.%03d", q$Revision: 1.5 $ =~ /: (\d+)\.(\d+)/;
+our $VERSION = '1.039';
+
+use vars qw($HaveCache $HaveLWP $HaveFilesystem);
 
 $HaveCache = 0;
 eval {
@@ -137,13 +137,10 @@ This is used by Email::MIME::CreateHTML to load resources.
 
 =back
 
-=head1 VERSION
-
-$Revision: 1.5 $ on $Date: 2006/08/24 21:41:38 $ by $Author: johna $
-
 =head1 AUTHOR
 
-Tony Hennessy, Simon Flack and John Alden
+Tony Hennessy, Simon Flack and John Alden with additional contributions by
+Ricardo Signes <rjbs@cpan.org> and Henry Van Styn <vanstyn@cpan.org>
 
 =head1 COPYRIGHT
 
