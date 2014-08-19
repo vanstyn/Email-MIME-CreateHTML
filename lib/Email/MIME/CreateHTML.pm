@@ -191,7 +191,8 @@ sub build_html_email {
 }
 
 # Add to Email::MIME
-package Email::MIME;
+package # Hide from PAUSE
+  Email::MIME;
 
 use strict;
 use Carp;
