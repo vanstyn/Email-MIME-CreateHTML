@@ -4,10 +4,7 @@ Revision history for perl module Email::MIME::CreateHTML
     - POD tweaks
     - Replace CVS-style VERSION with simple scalar version
     - Added config for Travis CI w/ coveralls
-    - Add support for perl-5.18 and higher - fixes:
-       * RT#900063
-       * RT#85953
-       * RT#96806
+    - Add support for perl-5.18 and higher (fixes RT#90063, RT#85953 and RT#96806)
     - Convert to use Dist::Zilla (fixes RT#61245)
     - Updated Changes file format
 
