@@ -129,14 +129,17 @@ sub parts_for_objects {
 
 sub build_html_email {
 	my($header, $html, $body_attributes, $html_mime_parts, $plain_text_mime) = @_;
-	
+
+	$body_attributes->{charset} = 'UTF-8' unless exists $body_attributes->{charset};
+	$body_attributes->{encoding}= 'quoted-printable' unless exists $body_attributes->{encoding};
+
 	my $email;
 	if ( ! scalar(@$html_mime_parts) && ! defined($plain_text_mime) ) {
 		# HTML, no embedded objects, no text alternative
 		$email = Email::MIME->create(
 			header => $header,
 			attributes => $body_attributes,
-			body => $html,
+			body_str => $html,
 		);
 	}
 	elsif ( ! scalar(@$html_mime_parts) && defined($plain_text_mime) ) {
@@ -148,7 +151,7 @@ sub build_html_email {
 				$plain_text_mime,
 				Email::MIME->create(
 					attributes => $body_attributes,
-					body => $html,
+					body_str => $html,
 				),
 			],
 		);
@@ -161,7 +164,7 @@ sub build_html_email {
 			parts => [
 				Email::MIME->create(
 					attributes => $body_attributes,
-					body => $html,
+					body_str => $html,
 				),
 				@$html_mime_parts,
 			],
@@ -179,7 +182,7 @@ sub build_html_email {
 					parts => [
 						Email::MIME->create(
 							attributes => $body_attributes,
-							body => $html,
+							body_str => $html,
 						),
 						@$html_mime_parts,
 					],

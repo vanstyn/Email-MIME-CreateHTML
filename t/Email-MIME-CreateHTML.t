@@ -270,6 +270,7 @@ sub test_mime {
 		my $got_body;
 
 		$exp_body =~ s/\s+$//g;
+		$exp_body =~ s/(?<!\r)\n/\r\n/g; # MIME mandates CRLF line endings in all encodings except binary
 
 		if(defined $mime) {
 		    $got_body = $mime->body;
