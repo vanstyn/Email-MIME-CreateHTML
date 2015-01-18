@@ -12,7 +12,7 @@ use File::Slurp::WithinPolicy 'read_file';
 use MIME::Types;
 use File::Spec;
 
-our $VERSION = '1.040';
+our $VERSION = '1.041';
 
 sub new {
 	my ($class, $options) = @_;

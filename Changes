@@ -1,5 +1,8 @@
 Revision history for perl module Email::MIME::CreateHTML
 
+1.041 2015-01-18
+    - Support non-ASCII HTML (PR #1) - Christoph Halbartschlager (christophhalbi)
+
 1.040 2014-08-19
     - POD tweaks
     - Replace CVS-style VERSION with simple scalar version
