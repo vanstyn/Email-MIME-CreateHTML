@@ -1,6 +1,12 @@
 use common::sense;
 
-use Email::Address;
+my $EMAIL_ADDRESS;
+BEGIN {
+    eval { require Email::Address::XS; $EMAIL_ADDRESS = 'Email::Address::XS' } or
+    eval { require Email::Address;     $EMAIL_ADDRESS = 'Email::Address'     } or
+    die "Email::Address::XS or Email::Address is required for this test";
+}
+
 use Email::MIME::CreateHTML;
 use Encode;
 use FindBin qw($Bin);
@@ -51,7 +57,7 @@ done_testing();
 sub generate_address {
     my ($name, $address) = @_;
 
-    return Email::Address->new(
+    return $EMAIL_ADDRESS->new(
         encode_mimeword(encode_utf8($name), 'Q', 'UTF-8'),
         encode_utf8($address)
     );
