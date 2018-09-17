@@ -8,7 +8,7 @@ package Email::MIME::CreateHTML::Resolver::Filesystem;
 
 use strict;
 use URI::file;
-use File::Slurp::WithinPolicy 'read_file';
+use File::Slurper 'read_binary';
 use MIME::Types;
 use File::Spec;
 
@@ -33,7 +33,7 @@ sub get_resource {
 	my $fullpath = defined($base_dir) ? File::Spec->catfile($base_dir,$path) : $path;
 
 	#Read in the file 
-	my $content = read_file($fullpath);
+	my $content = read_binary($fullpath);
 	my ($volume,$directories,$filename) = File::Spec->splitpath( $path );
 	
 	#Deduce MIME type/transfer encoding (currently using extension)
