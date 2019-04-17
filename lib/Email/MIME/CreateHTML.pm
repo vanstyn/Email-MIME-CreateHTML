@@ -12,6 +12,8 @@ use Exporter;
 use Email::MIME;
 use HTML::TokeParser::Simple;
 use HTML::Tagset;
+use Encode::Guess;
+use Encode qw' _utf8_on ';
 
 our $VERSION = '1.042';
 
@@ -127,11 +129,50 @@ sub parts_for_objects {
 	return @html_mime_parts;
 }
 
+# ( $string, $status ) = _normalize_to_perl_string( $string, $encoding )
+#
+# Tries (no guarantee) to ensure that the string passed in becomes a
+# decoded utf8 perl string; i.e. not an encoded sequence of octets.
+#
+# In the optimal case the given string already is a decoded utf8 perl string (or
+# ascii), in which case it simply returns it with an undef status.
+#
+# If not, it tries to make it a decoded utf8 perl string, and
+# returns the status as well to explain what it thinks the string was.
+
+sub _normalize_to_perl_string {
+	my ($string, $encoding) = @_;
+	if(ref(my $enc = guess_encoding $string)) { # tests ascii and utf8.
+		# Need to accept UTF8 without even checking what the target encoding was,
+		# as the input may correctly be a decoded perl utf8 string, but the target
+		# for the email may be some other encoding.
+		my $backup = $string;
+		_utf8_on $string; # NOP on perl utf8 or ascii strings.
+											# Upgrades encoded utf8 bytes to perl utf8 string.
+		my $status = $string ne $backup ? "bytes in utf8 encoding" : undef;
+		return ($string, $status);
+	}
+	if(ref(my $enc = guess_encoding $string, $encoding)) {
+		# This may result in false-positive recognitions of one encoding as another,
+		# but given that it would have resulted in a double-encoded string in
+		# the email anyhow, it doesn't make the situation worse, and it causes
+		# a warning.
+		return ($enc->decode($string), "bytes in ".$enc->name." encoding");
+	}
+	# Encode::Guess can only work with small preset lists, and honestly,
+	# if the string is encoded, not utf8 AND not in the encoding passed
+	# to the function, then there's little useful to do but warn about it.
+	return ($string, "bytes in unknown encoding instead of $encoding");
+}
+
 sub build_html_email {
 	my($header, $html, $body_attributes, $html_mime_parts, $plain_text_mime) = @_;
 
 	$body_attributes->{charset} = 'UTF-8' unless exists $body_attributes->{charset};
 	$body_attributes->{encoding}= 'quoted-printable' unless exists $body_attributes->{encoding};
+
+	($html, my $status) = _normalize_to_perl_string($html, $body_attributes->{charset});
+	warn "created email may be corrupt, body was not a decoded perl utf8 string, but: $status" if $status;
 
 	my $email;
 	if ( ! scalar(@$html_mime_parts) && ! defined($plain_text_mime) ) {
