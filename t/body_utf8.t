@@ -29,9 +29,9 @@ for (
 my @base = ( header => [ From => 'unittest_a@example.co.uk', To => 'mail@mail', Subject => '.' ], body => );
 
 my ( undef, $warn ) = capture { Email::MIME->create_html( @base, $d ) };
-like $warn, qr/created email may be corrupt, body was not a decoded perl utf8 string, but: bytes in utf8 encoding/, "warns with encoded body";
+like $warn, qr/created email may be corrupt, body was not a decoded perl unicode string, but: bytes in utf8 encoding/, "warns with encoded body";
 
 ( undef, $warn ) = capture { Email::MIME->create_html( @base, $c ) };
-is $warn, "", "decoded perl utf8 string causes no warnings";
+is $warn, "", "decoded perl unicode string causes no warnings";
 
 done_testing;
