@@ -240,7 +240,6 @@ package # Hide from PAUSE
 
 use strict;
 use Carp;
-use Email::MIME::Creator;
 
 sub create_html {
 	my ($class, %args) = @_;
@@ -420,7 +419,7 @@ A scalar value holding the HTML message body.
 
 =item body_attributes =E<gt> I<hash reference>
 
-This is passed as the attributes parameter to the C<create> method (supplied by C<Email::MIME::Creator>) that creates the html part of the mail.
+This is passed as the attributes parameter to the C<Email::MIME->create> method that creates the html part of the mail.
 The body content-type will be set to C<text/html> unless it is overidden here.
 
 =item embed =E<gt> I<boolean>
@@ -489,7 +488,7 @@ A scalar value holding the contents of an additional I<plain text> message body.
 
 =item text_body_attributes =E<gt> I<hash reference>
 
-This is passed as the attributes parameter to the C<create> method (supplied by C<Email::MIME::Creator>) that creates the plain text part of the mail.
+This is passed as the attributes parameter to the C<Email::MIME->create> method that creates the plain text part of the mail.
 The body Content-Type will be set to C<text/plain> unless it is overidden here.
 
 =back
@@ -708,7 +707,7 @@ Alternatively you can roll your own.  You just need to define an object with get
 
 Perl Email Project L<http://pep.pobox.com>
 
-L<Email::Simple>, L<Email::MIME>, L<Email::Send>, L<Email::MIME::Creator>
+L<Email::Simple>, L<Email::MIME>, L<Email::Send>
 
 =head1 TODO
 
