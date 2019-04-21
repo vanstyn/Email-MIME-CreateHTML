@@ -26,12 +26,25 @@ for (
     is $status, $status_expected, "status";
 }
 
-my @base = ( header => [ From => 'unittest_a@example.co.uk', To => 'mail@mail', Subject => '.' ], body => );
+my @core = ( header => [ From => 'unittest_a@example.co.uk', To => 'mail@mail', Subject => '.' ] );
+my @base = ( @core, body => );
 
 my ( undef, $warn ) = capture { Email::MIME->create_html( @base, $d ) };
 like $warn, qr/created email may be corrupt, body was not a decoded perl unicode string, but: bytes in utf8 encoding/, "warns with encoded body";
 
 ( undef, $warn ) = capture { Email::MIME->create_html( @base, $c ) };
+is $warn, "", "decoded perl unicode string causes no warnings";
+
+( undef, $warn, my $res ) = capture { Email::MIME::CreateHTML->create( @core, body_str => $c ) };
+is $res->body_str, $c, "body didn't get corrupted";
+is $warn, "", "decoded perl unicode string causes no warnings";
+
+( undef, $warn, $res ) = capture { Email::MIME::CreateHTML->create( @core, body => $d ) };
+is $res->body_str, $c, "body didn't get corrupted";
+is $warn, "", "decoded perl unicode string causes no warnings";
+
+( undef, $warn, $res ) = capture { Email::MIME::CreateHTML->create( @core, body => $e, body_attributes => { charset => "shiftjis" } ) };
+is $res->body_str, $c, "body didn't get corrupted";
 is $warn, "", "decoded perl unicode string causes no warnings";
 
 done_testing;
