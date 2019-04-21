@@ -13,7 +13,7 @@ use Email::MIME;
 use HTML::TokeParser::Simple;
 use HTML::Tagset;
 use Encode::Guess;
-use Encode qw' _utf8_on ';
+use Encode qw' _utf8_on decode ';
 
 our $VERSION = '1.042';
 
@@ -165,6 +165,13 @@ sub _normalize_to_perl_string {
 	return ($string, "bytes in unknown encoding instead of $encoding");
 }
 
+sub _normalize_and_warn {
+	my ($string, $encoding) = @_;
+	($string, my $status) = _normalize_to_perl_string($string, $encoding);
+	carp "created email may be corrupt, body was not a decoded perl unicode string, but: $status" if $status;
+	return $string;
+}
+
 sub build_html_raw_email { _build_html_email(@_, body => 0) }
 
 sub build_html_str_email { _build_html_email(@_, body_str => 0) }
@@ -177,8 +184,7 @@ sub _build_html_email {
 	$body_attributes->{charset} = 'UTF-8' unless exists $body_attributes->{charset};
 	$body_attributes->{encoding}= 'quoted-printable' unless exists $body_attributes->{encoding};
 
-	($html, my $status) = _normalize_to_perl_string($html, $body_attributes->{charset});
-	warn "created email may be corrupt, body was not a decoded perl unicode string, but: $status" if $status;
+	$html = _normalize_and_warn($html, $body_attributes->{charset}) if $do_normalize;
 
 	my $email;
 	if ( ! scalar(@$html_mime_parts) && ! defined($plain_text_mime) ) {
@@ -246,7 +252,8 @@ sub _create_html {
 	my ($class, %args) = @_;
 
 	#Argument checking/defaulting
-	my $html = $args{body} || croak "You must supply a body";
+	croak "You can only supply either body_str or body, not both" if $args{body_str} && $args{body};
+	my $html = $args{body_str} || $args{body} || croak "You must supply either body_str or body";
 	my $objects = $args{'objects'} || undef;
 	
 	# Make plain text Email::MIME object, we will never use this alone so we don't need the headers
@@ -260,6 +267,10 @@ sub _create_html {
 	}
 
 	# Parse the HTML and create a CID mapping for objects to embed
+	# The HTML parser requires a decoded perl unicode string, so we munge that ahead of time
+	my $encoding = $args{body_attributes}{charset} || 'UTF-8';
+	$html = $args{body_type_unknown} ? _normalize_and_warn( $html, $encoding )    #
+		: $args{body} ? decode $encoding, $html, 1 : $html;                         #
 	($html, my $embedded_cids) = embed_objects($html, \%args);
 
 	# Create parts for each embedded object
@@ -270,7 +281,7 @@ sub _create_html {
 	# Create the mail
 	my $header = $args{header};
 	my %body_attributes = ( (content_type=>'text/html'), %{$args{body_attributes} || {}});
-	my $email = build_html_email($header, $html, \%body_attributes, \@html_mime_parts, $plain_text_mime);
+	my $email = build_html_str_email($header, $html, \%body_attributes, \@html_mime_parts, $plain_text_mime);
 	return $email;
 }
 
@@ -306,7 +317,7 @@ Email::MIME::CreateHTML - Multipart HTML Email builder
 			To => 'your@address',
 			Subject => 'Here is the information you requested',
 		],
-		body => $html,
+		body_str => $html,
 		text_body => $plain_text
 	);
 
@@ -441,9 +452,16 @@ A list reference containing a set of headers to be created.
 If no Date header is specified, one will be provided for you based on the
 gmtime() of the local machine.
 
+=item body_str =E<gt> I<scalar>
+
 =item body =E<gt> I<scalar>
 
 A scalar value holding the HTML message body.
+
+C<body_str> expects a decoded perl unicode string.
+
+C<body> expects an encoded octed sequence. During email construction this will
+be decoded, using either the charset provided in C<body_attributes> or UTF-8.
 
 =item body_attributes =E<gt> I<hash reference>
 
