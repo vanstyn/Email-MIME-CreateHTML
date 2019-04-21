@@ -240,14 +240,9 @@ sub _build_html_email {
 	return $email;
 }
 
-# Add to Email::MIME
-package # Hide from PAUSE
-  Email::MIME;
+sub create { _create_html(@_) }
 
-use strict;
-use Carp;
-
-sub create_html {
+sub _create_html {
 	my ($class, %args) = @_;
 
 	#Argument checking/defaulting
@@ -265,20 +260,28 @@ sub create_html {
 	}
 
 	# Parse the HTML and create a CID mapping for objects to embed
-	my $embedded_cids;
-	($html, $embedded_cids) = Email::MIME::CreateHTML::embed_objects($html, \%args);
+	($html, my $embedded_cids) = embed_objects($html, \%args);
 
 	# Create parts for each embedded object
 	my @html_mime_parts;
-	push @html_mime_parts, Email::MIME::CreateHTML::parts_for_objects($objects, \%args) if ($objects); 
-	push @html_mime_parts, Email::MIME::CreateHTML::parts_for_objects($embedded_cids, \%args) if(%$embedded_cids); 
+	push @html_mime_parts, parts_for_objects($objects, \%args) if ($objects);
+	push @html_mime_parts, parts_for_objects($embedded_cids, \%args) if(%$embedded_cids);
 
 	# Create the mail
 	my $header = $args{header};
 	my %body_attributes = ( (content_type=>'text/html'), %{$args{body_attributes} || {}});
-	my $email = Email::MIME::CreateHTML::build_html_email($header, $html, \%body_attributes, \@html_mime_parts, $plain_text_mime);
+	my $email = build_html_email($header, $html, \%body_attributes, \@html_mime_parts, $plain_text_mime);
 	return $email;
 }
+
+# Add to Email::MIME
+package # Hide from PAUSE
+  Email::MIME;
+
+use strict;
+use Carp;
+
+sub create_html { Email::MIME::CreateHTML::_create_html(@_, body_type_unknown => 1) }
 
 #Log::Trace stubs
 sub DUMP {}
@@ -297,7 +300,7 @@ Email::MIME::CreateHTML - Multipart HTML Email builder
 =head1 SYNOPSIS
 
 	use Email::MIME::CreateHTML;
-	my $email = Email::MIME->create_html(
+	my $email = Email::MIME::CreateHTML->create(
 		header => [
 			From => 'my@address',
 			To => 'your@address',
@@ -357,15 +360,24 @@ HTML with embedded objects, with text alternative
 
 =head1 METHODS
 
-There is only one method, which is installed into the Email::MIME package:
-
 =over 4
+
+=item Email::MIME::CreateHTML->create(%parameters)
+
+This method creates an Email::MIME object from a set of named parameters. Of
+these the C<header> is mandatory and C<body_str> or C<body> must be present. All
+others are optional. See the L</PARAMETERS> section for more information.
 
 =item Email::MIME->create_html(%parameters)
 
-This method creates an Email::MIME object from a set of named parameters.
-Of these the C<header> and C<body> parameters are mandatory and all others are optional.
-See the L</PARAMETERS> section for more information.
+This method is provided only for backwards compatibility. It accepts the C<body>
+parameter in either encoded octets or a decoded perl unicode string and tries to
+guess which it is. This can lead to corrupted emails.
+
+Please replace it with the call above.
+
+As it only exists to not break older uses of this module, not all the
+functionality documented under L</PARAMETERS> will work with this call.
 
 =back
 
