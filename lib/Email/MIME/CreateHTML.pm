@@ -567,36 +567,36 @@ You can override this using the C<embed_elements> parameter.
 
 This builds an HTML email:
 
-	my $email = Email::MIME->create_html(
+	my $email = Email::MIME::CreateHTML->create(
 		header => [
 			From => 'my@address',
 			To => 'your@address',
 			Subject => 'My speedy HTML',
 		],
-		body => $html
+		body_str => $html
 	);
 
 If you want a plaintext alternative, include the C<text_body> option:
 
-	my $email = Email::MIME->create_html(
+	my $email = Email::MIME::CreateHTML->create(
 		header => [
 			From => 'my@address',
 			To => 'your@address',
 			Subject => 'Here is the information you requested',
 		],
-		body => $html,
+		body_str => $html,
 		text_body => $plain_text #<--
 	);
 	
 If you want your images to remain as links (rather than be embedded in the email) disable the C<embed> option:
 
-	my $email = Email::MIME->create_html(
+	my $email = Email::MIME::CreateHTML->create(
 		header => [
 			From => 'my@address',
 			To => 'your@address',
 			Subject => 'My speedy HTML',
 		],
-		body => $html,
+		body_str => $html,
 		embed => 0 #<--
 	);
 
@@ -620,13 +620,13 @@ You then need to create a mapping of the Content IDs to object filenames:
 
 Finally you need to disable both the C<embed> and C<inline_css> options to turn off HTML parsing, and pass in your mapping: 
 	
-	my $quick_to_assemble_mime = Email::MIME->create_html(
+	my $quick_to_assemble_mime = Email::MIME::CreateHTML->create(
 		header => [
 			From => 'my@address',
 			To => 'your@address',
 			Subject => 'My speedy HTML',
 		],
-		body => $html,
+		body_str => $html,
 		embed => 0,          #<--
 		inline_css => 0,     #<--
 		objects => \%objects #<--
@@ -648,13 +648,13 @@ You can then reuse this and the CID mapping:
 		my $html = $template->process($newsletter);
 		
 		#Build MIME structure
-		my $mime = Email::MIME->create_html(
+		my $mime = Email::MIME::CreateHTML->create(
 			header => [
 				From => $reply_address,
 				To => $newsletter->address,
 				Subject => 'Weekly newsletter',
 			],
-			body => $html,
+			body_str => $html,
 			embed => 0,              #Already done
 			inline_css => 0,         #Already done
 			objects => $cid_mapping  #Here's one we prepared earlier
@@ -670,13 +670,13 @@ Note that one caveat with this approach is that all possible images that might b
 
 A custom resource resolver can be specified by passing your own object to resolver:
 
-	my $mime = Email::MIME->create_html(
+	my $mime = Email::MIME::CreateHTML->create(
 		header => [
 			From => 'my@address',
 			To => 'your@address',
 			Subject => 'Here is the information you requested',
 		],
-		body => $html,
+		body_str => $html,
 		base => 'http://internal.foo.co.uk/images/',
 		resolver => new MyResolver,         #<--
 	);
@@ -713,9 +713,9 @@ where:
 You can use a cache from the Cache::Cache distribution:
 	
 	use Cache::MemoryCache;
-	my $mime = Email::MIME->create_html(
+	my $mime = Email::MIME::CreateHTML->create(
 		header => \@headers,
-		body => $html,
+		body_str => $html,
 		object_cache => new Cache::MemoryCache( { 
 			'namespace' => 'MyNamespace',
 			'default_expires_in' => 600 
@@ -725,9 +725,9 @@ You can use a cache from the Cache::Cache distribution:
 Or a cache from the Cache distribution:
 	
 	use Cache::File;
-	my $mime = Email::MIME->create_html(
+	my $mime = Email::MIME::CreateHTML->create(
 		header => \@headers,
-		body => $html,
+		body_str => $html,
 		object_cache => Cache::File->new( 
 			cache_root => '/tmp/mycache',
 			default_expires => '600 sec'
@@ -736,9 +736,9 @@ Or a cache from the Cache distribution:
 
 Alternatively you can roll your own.  You just need to define an object with get and set methods:
 
-	my $mime = Email::MIME->create_html(
+	my $mime = Email::MIME::CreateHTML->create(
 		header => \@headers,
-		body => $html,
+		body_str => $html,
 		object_cache => new MyCache() 
 	);
 	
