@@ -165,8 +165,14 @@ sub _normalize_to_perl_string {
 	return ($string, "bytes in unknown encoding instead of $encoding");
 }
 
-sub build_html_email {
-	my($header, $html, $body_attributes, $html_mime_parts, $plain_text_mime) = @_;
+sub build_html_raw_email { _build_html_email(@_, body => 0) }
+
+sub build_html_str_email { _build_html_email(@_, body_str => 0) }
+
+sub build_html_email { _build_html_email(@_, body_str => 1) }
+
+sub _build_html_email {
+	my($header, $html, $body_attributes, $html_mime_parts, $plain_text_mime, $body_type, $do_normalize) = @_;
 
 	$body_attributes->{charset} = 'UTF-8' unless exists $body_attributes->{charset};
 	$body_attributes->{encoding}= 'quoted-printable' unless exists $body_attributes->{encoding};
@@ -180,7 +186,7 @@ sub build_html_email {
 		$email = Email::MIME->create(
 			header => $header,
 			attributes => $body_attributes,
-			body_str => $html,
+			$body_type => $html,
 		);
 	}
 	elsif ( ! scalar(@$html_mime_parts) && defined($plain_text_mime) ) {
@@ -192,7 +198,7 @@ sub build_html_email {
 				$plain_text_mime,
 				Email::MIME->create(
 					attributes => $body_attributes,
-					body_str => $html,
+					$body_type => $html,
 				),
 			],
 		);
@@ -205,7 +211,7 @@ sub build_html_email {
 			parts => [
 				Email::MIME->create(
 					attributes => $body_attributes,
-					body_str => $html,
+					$body_type => $html,
 				),
 				@$html_mime_parts,
 			],
@@ -223,7 +229,7 @@ sub build_html_email {
 					parts => [
 						Email::MIME->create(
 							attributes => $body_attributes,
-							body_str => $html,
+							$body_type => $html,
 						),
 						@$html_mime_parts,
 					],
@@ -397,9 +403,19 @@ Relevant options are:
 
 The meanings and defaults of these parameters are explained below.
 
+=item $email = build_html_str_email(\@headers, $html, \%body_attributes, \@html_mime_parts, $plain_text_mime)
+
+=item $email = build_html_raw_email(\@headers, $html, \%body_attributes, \@html_mime_parts, $plain_text_mime)
+
 =item $email = build_html_email(\@headers, $html, \%body_attributes, \@html_mime_parts, $plain_text_mime)
 
 The assembles a ready-to-send Email::MIME object (that can be sent with Email::Send).
+C<$plain_text_mime> is required to be an Email::MIME object.
+
+C<build_html_str_email> expects C<$html> to be a decoded perl unicode string.
+C<build_html_raw_email> expects C<$html> to be an encoded octet sequence.
+C<build_html_email> is provided for backwards compatibility reasons and will
+attempt to guess which of the previous two scalar types C<$html> is.
 
 =back
 
