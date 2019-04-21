@@ -257,18 +257,18 @@ sub _create_html {
 	my $objects = $args{'objects'} || undef;
 	
 	# Make plain text Email::MIME object, we will never use this alone so we don't need the headers
+	my $encoding = $args{body_attributes}{charset} || 'UTF-8';
 	my $plain_text_mime;
 	if ( exists($args{text_body}) ) {
-		my %text_body_attributes = ( (content_type=>'text/plain'), %{$args{text_body_attributes} || {}} );
-		$plain_text_mime = $class->create(
-			attributes => \%text_body_attributes,
-			body => $args{text_body},
-		);
+		my %text_body_attributes = ( content_type=>'text/plain', encoding => 'quoted-printable', %{$args{text_body_attributes} || {}} );
+		my $text_encoding = $text_body_attributes{charset} ||= $encoding;
+		my $text = $args{text_body};
+		$text = decode $encoding, $text, 1 if $args{body_type_unknown} || $args{body};
+		$plain_text_mime = $class->create(attributes => \%text_body_attributes, body_str => $text);
 	}
 
 	# Parse the HTML and create a CID mapping for objects to embed
 	# The HTML parser requires a decoded perl unicode string, so we munge that ahead of time
-	my $encoding = $args{body_attributes}{charset} || 'UTF-8';
 	$html = $args{body_type_unknown} ? _normalize_and_warn( $html, $encoding )    #
 		: $args{body} ? decode $encoding, $html, 1 : $html;                         #
 	($html, my $embedded_cids) = embed_objects($html, \%args);
@@ -383,7 +383,9 @@ others are optional. See the L</PARAMETERS> section for more information.
 
 This method is provided only for backwards compatibility. It accepts the C<body>
 parameter in either encoded octets or a decoded perl unicode string and tries to
-guess which it is. This can lead to corrupted emails.
+guess which it is. This can lead to corrupted emails. C<text_body> is required
+by this method to be an encoded octet sequence in either the charset configured
+in C<text_body_attributes>, C<body_attributes> or UTF-8.
 
 Please replace it with the call above.
 
@@ -531,6 +533,12 @@ Both the Cache and Cache::Cache distributions on CPAN conform to this.
 =item text_body =E<gt> I<scalar>
 
 A scalar value holding the contents of an additional I<plain text> message body.
+
+This mirrors the behavior of the body string, that is if the body string is
+passed via C<body_str> it is expected to be a decoded perl unicode string; and
+if it is passed via C<body> it is expected to be an encoded octet sequence in
+either the charset configured in C<text_body_attributes>, C<body_attributes> or
+UTF-8.
 
 =item text_body_attributes =E<gt> I<hash reference>
 
