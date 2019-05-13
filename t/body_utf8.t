@@ -47,4 +47,37 @@ is $warn, "", "decoded perl unicode string causes no warnings";
 is $res->body_str, $c, "body didn't get corrupted";
 is $warn, "", "decoded perl unicode string causes no warnings";
 
+subtest text_body => sub {
+	my @methods= (
+		[ "via old create API",
+		  sub { Email::MIME->create_html( @core,
+				body => $d, body_attributes => { charset => "UTF-8" },
+				text_body => $e, text_body_attributes => { charset => "shiftjis" },
+		  )},
+		],
+		[ "via new create API, but use pre-encoded strings like in old API",
+		  sub { Email::MIME::CreateHTML->create( @core,
+				body => $d, body_attributes => { charset => "UTF-8" },
+				text_body => $e, text_body_attributes => { charset => "shiftjis" },
+		  )},
+		],
+		[ "via new create API, with perl unicode strings",
+		  sub { Email::MIME::CreateHTML->create( @core,
+				body_str => $c, body_attributes => { charset => "UTF-8" },
+				text_body_str => $c, text_body_attributes => { charset => "shiftjis" },
+		  )},
+		],
+	);
+	for (@methods) {
+		my ($name, $sub)= @$_;
+		subtest $name => sub {
+			( undef, $warn, $res ) = &capture($sub);
+			is( ($res->subparts)[0]->body_str, $c, 'text body not corrupted' );
+			is( ($res->subparts)[0]->body,     $e, 'text body encoded as shiftjis' );
+			is( ($res->subparts)[1]->body_str, $c, 'html body not corrupted' );
+			is( ($res->subparts)[1]->body,     $d, 'html body encoded as utf-8' );
+		};
+	}
+};
+
 done_testing;
