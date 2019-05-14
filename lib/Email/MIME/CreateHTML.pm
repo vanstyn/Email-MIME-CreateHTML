@@ -147,8 +147,8 @@ sub _normalize_to_perl_string {
 		# as the input may correctly be a decoded perl unicode string, but
 		# the target for the email may be some other encoding.
 		my $backup = $string;
-		_utf8_on $string; # NOP on decoded perl unicode or ascii strings.
-		                  # Upgrades encoded utf8 bytes to perl unicode string.
+		# NOP on decoded strings. Upgrades encoded utf8 bytes to perl unicode string.
+		_utf8_on $string if $enc->name ne "ascii";
 		my $status = $string ne $backup ? "bytes in utf8 encoding" : undef;
 		return ($string, $status);
 	}
