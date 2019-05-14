@@ -249,7 +249,7 @@ sub _build_html_email {
 sub create { _create_html(@_) }
 
 sub _create_html {
-	my ($class, %args) = @_;
+	my (undef, %args) = @_;
 
 	#Argument checking/defaulting
 	croak "You can only supply either body_str or body, not both" if $args{body_str} && $args{body};
@@ -264,7 +264,7 @@ sub _create_html {
 		my $text_encoding = $text_body_attributes{charset} ||= $encoding;
 		my $text = $args{text_body};
 		$text = decode $text_encoding, $text, 1 if $args{body_type_unknown} || $args{body};
-		$plain_text_mime = $class->create(attributes => \%text_body_attributes, body_str => $text);
+		$plain_text_mime = Email::MIME->create(attributes => \%text_body_attributes, body_str => $text);
 	}
 
 	# Parse the HTML and create a CID mapping for objects to embed
