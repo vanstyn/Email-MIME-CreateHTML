@@ -50,8 +50,7 @@ is $warn, "", "decoded perl unicode string causes no warnings";
 subtest text_body => sub {
 	my @base = ( @core, body_attributes => { charset => "UTF-8" }, text_body_attributes => { charset => "shiftjis" } );
 	my @methods = (
-		[ { body     => $encoded_utf8, text_body     => $encoded_jis }, "via old create API", ],
-		[ { body     => $encoded_utf8, text_body     => $encoded_jis }, "via new create API, but use pre-encoded strings like in old API" ],
+		[ { body     => $encoded_utf8, text_body     => $encoded_jis }, "via new create API, with encoded strings", ],
 		[ { body_str => $perlstring,   text_body_str => $perlstring },  "via new create API, with perl unicode strings" ],
 	);
 	for (@methods) {
