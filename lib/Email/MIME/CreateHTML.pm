@@ -263,7 +263,7 @@ sub _create_html {
 		my %text_body_attributes = ( content_type=>'text/plain', encoding => 'quoted-printable', %{$args{text_body_attributes} || {}} );
 		my $text_encoding = $text_body_attributes{charset} ||= $encoding;
 		my $text = $args{text_body};
-		$text = decode $encoding, $text, 1 if $args{body_type_unknown} || $args{body};
+		$text = decode $text_encoding, $text, 1 if $args{body_type_unknown} || $args{body};
 		$plain_text_mime = $class->create(attributes => \%text_body_attributes, body_str => $text);
 	}
 
