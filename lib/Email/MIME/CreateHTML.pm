@@ -253,17 +253,17 @@ sub _create_html {
 
 	#Argument checking/defaulting
 	croak "You can only supply either body_str or body, not both" if $args{body_str} && $args{body};
+	croak "You can only supply either text_body_str or text_body, not both" if $args{text_body_str} && $args{text_body};
 	my $html = $args{body_str} || $args{body} || croak "You must supply either body_str or body";
 	my $objects = $args{'objects'} || undef;
 	
 	# Make plain text Email::MIME object, we will never use this alone so we don't need the headers
 	my $encoding = $args{body_attributes}{charset} || 'UTF-8';
 	my $plain_text_mime;
-	if ( exists($args{text_body}) ) {
+	if ( my $text = $args{text_body_str} || $args{text_body} ) {
 		my %text_body_attributes = ( content_type=>'text/plain', encoding => 'quoted-printable', %{$args{text_body_attributes} || {}} );
 		my $text_encoding = $text_body_attributes{charset} ||= $encoding;
-		my $text = $args{text_body};
-		$text = decode $text_encoding, $text, 1 if $args{body_type_unknown} || $args{body};
+		$text = decode $text_encoding, $text, 1 if $args{body_type_unknown} || $args{text_body};
 		$plain_text_mime = Email::MIME->create(attributes => \%text_body_attributes, body_str => $text);
 	}
 
@@ -318,7 +318,7 @@ Email::MIME::CreateHTML - Multipart HTML Email builder
 			Subject => 'Here is the information you requested',
 		],
 		body_str => $html,
-		text_body => $plain_text
+		text_body_str => $plain_text
 	);
 
 	use Email::Send;
@@ -530,15 +530,20 @@ This must support the following interface:
 
 Both the Cache and Cache::Cache distributions on CPAN conform to this.
 
+
+=item text_body_str =E<gt> I<scalar>
+
 =item text_body =E<gt> I<scalar>
 
 A scalar value holding the contents of an additional I<plain text> message body.
 
-This mirrors the behavior of the body string, that is if the body string is
-passed via C<body_str> it is expected to be a decoded perl unicode string; and
-if it is passed via C<body> it is expected to be an encoded octet sequence in
-either the charset configured in C<text_body_attributes>, C<body_attributes> or
-UTF-8.
+C<text_body_str> expects a decoded perl unicode string.
+
+C<text_body> mirrors the behavior of the body string, that is if the body string
+is passed: via C<body_str>, C<text_body> is expected to be a decoded perl
+unicode string; via C<body>, C<text_body> is expected to be an encoded octet
+sequence in either the charset configured in C<text_body_attributes>,
+C<body_attributes> or UTF-8, depending on which of these parameters were given.
 
 =item text_body_attributes =E<gt> I<hash reference>
 
