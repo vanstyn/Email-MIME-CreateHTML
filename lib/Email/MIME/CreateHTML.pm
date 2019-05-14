@@ -12,6 +12,8 @@ use Exporter;
 use Email::MIME;
 use HTML::TokeParser::Simple;
 use HTML::Tagset;
+use Encode::Guess;
+use Encode qw' _utf8_on decode ';
 
 our $VERSION = '1.042';
 
@@ -127,11 +129,62 @@ sub parts_for_objects {
 	return @html_mime_parts;
 }
 
-sub build_html_email {
-	my($header, $html, $body_attributes, $html_mime_parts, $plain_text_mime) = @_;
+# ( $string, $status ) = _normalize_to_perl_string( $string, $encoding )
+#
+# Tries (no guarantee) to ensure that the string passed in becomes a
+# decoded perl unicode string; i.e. not an encoded sequence of octets.
+#
+# In the optimal case the given string already is a decoded perl unicode string
+# (or ascii), in which case it simply returns it with an undef status.
+#
+# If not, it tries to make it a decoded perl unicode string, and
+# returns the status as well to explain what it thinks the string was.
+
+sub _normalize_to_perl_string {
+	my ($string, $encoding) = @_;
+	if(ref(my $enc = guess_encoding $string)) { # tests ascii and utf8.
+		# Need to accept UTF8 without even checking what the target encoding was,
+		# as the input may correctly be a decoded perl unicode string, but
+		# the target for the email may be some other encoding.
+		my $backup = $string;
+		# NOP on decoded strings. Upgrades encoded utf8 bytes to perl unicode string.
+		_utf8_on $string if $enc->name ne "ascii";
+		my $status = $string ne $backup ? "bytes in utf8 encoding" : undef;
+		return ($string, $status);
+	}
+	if(ref(my $enc = guess_encoding $string, $encoding)) {
+		# This may result in false-positive recognitions of one encoding as another,
+		# but given that it would have resulted in a double-encoded string in
+		# the email anyhow, it doesn't make the situation worse, and it causes
+		# a warning.
+		return ($enc->decode($string), "bytes in ".$enc->name." encoding");
+	}
+	# Encode::Guess can only work with small preset lists, and honestly,
+	# if the string is encoded, not utf8 AND not in the encoding passed
+	# to the function, then there's little useful to do but warn about it.
+	return ($string, "bytes in unknown encoding instead of $encoding");
+}
+
+sub _normalize_and_warn {
+	my ($string, $encoding) = @_;
+	($string, my $status) = _normalize_to_perl_string($string, $encoding);
+	carp "created email may be corrupt, body was not a decoded perl unicode string, but: $status" if $status;
+	return $string;
+}
+
+sub build_html_raw_email { _build_html_email(@_, body => 0) }
+
+sub build_html_str_email { _build_html_email(@_, body_str => 0) }
+
+sub build_html_email { _build_html_email(@_, body_str => 1) }
+
+sub _build_html_email {
+	my($header, $html, $body_attributes, $html_mime_parts, $plain_text_mime, $body_type, $do_normalize) = @_;
 
 	$body_attributes->{charset} = 'UTF-8' unless exists $body_attributes->{charset};
 	$body_attributes->{encoding}= 'quoted-printable' unless exists $body_attributes->{encoding};
+
+	$html = _normalize_and_warn($html, $body_attributes->{charset}) if $do_normalize;
 
 	my $email;
 	if ( ! scalar(@$html_mime_parts) && ! defined($plain_text_mime) ) {
@@ -139,7 +192,7 @@ sub build_html_email {
 		$email = Email::MIME->create(
 			header => $header,
 			attributes => $body_attributes,
-			body_str => $html,
+			$body_type => $html,
 		);
 	}
 	elsif ( ! scalar(@$html_mime_parts) && defined($plain_text_mime) ) {
@@ -151,7 +204,7 @@ sub build_html_email {
 				$plain_text_mime,
 				Email::MIME->create(
 					attributes => $body_attributes,
-					body_str => $html,
+					$body_type => $html,
 				),
 			],
 		);
@@ -164,7 +217,7 @@ sub build_html_email {
 			parts => [
 				Email::MIME->create(
 					attributes => $body_attributes,
-					body_str => $html,
+					$body_type => $html,
 				),
 				@$html_mime_parts,
 			],
@@ -182,7 +235,7 @@ sub build_html_email {
 					parts => [
 						Email::MIME->create(
 							attributes => $body_attributes,
-							body_str => $html,
+							$body_type => $html,
 						),
 						@$html_mime_parts,
 					],
@@ -193,46 +246,53 @@ sub build_html_email {
 	return $email;
 }
 
+sub create { _create_html(@_) }
+
+sub _create_html {
+	my (undef, %args) = @_;
+
+	#Argument checking/defaulting
+	croak "You can only supply either body_str or body, not both" if $args{body_str} && $args{body};
+	croak "You can only supply either text_body_str or text_body, not both" if $args{text_body_str} && $args{text_body};
+	my $html = $args{body_str} || $args{body} || croak "You must supply either body_str or body";
+	my $objects = $args{'objects'} || undef;
+	
+	# Make plain text Email::MIME object, we will never use this alone so we don't need the headers
+	my $encoding = $args{body_attributes}{charset} || 'UTF-8';
+	my $plain_text_mime;
+	if ( my $text = $args{text_body_str} || $args{text_body} ) {
+		my %text_body_attributes = ( content_type=>'text/plain', encoding => 'quoted-printable', %{$args{text_body_attributes} || {}} );
+		my $text_encoding = $text_body_attributes{charset} ||= $encoding;
+		$text = decode $text_encoding, $text, 1 if $args{body_type_unknown} || $args{text_body};
+		$plain_text_mime = Email::MIME->create(attributes => \%text_body_attributes, body_str => $text);
+	}
+
+	# Parse the HTML and create a CID mapping for objects to embed
+	# The HTML parser requires a decoded perl unicode string, so we munge that ahead of time
+	$html = $args{body_type_unknown} ? _normalize_and_warn( $html, $encoding )    #
+		: $args{body} ? decode $encoding, $html, 1 : $html;                         #
+	($html, my $embedded_cids) = embed_objects($html, \%args);
+
+	# Create parts for each embedded object
+	my @html_mime_parts;
+	push @html_mime_parts, parts_for_objects($objects, \%args) if ($objects);
+	push @html_mime_parts, parts_for_objects($embedded_cids, \%args) if(%$embedded_cids);
+
+	# Create the mail
+	my $header = $args{header};
+	my %body_attributes = ( (content_type=>'text/html'), %{$args{body_attributes} || {}});
+	my $email = build_html_str_email($header, $html, \%body_attributes, \@html_mime_parts, $plain_text_mime);
+	return $email;
+}
+
 # Add to Email::MIME
 package # Hide from PAUSE
   Email::MIME;
 
 use strict;
 use Carp;
-use Email::MIME::Creator;
 
-sub create_html {
-	my ($class, %args) = @_;
-
-	#Argument checking/defaulting
-	my $html = $args{body} || croak "You must supply a body";
-	my $objects = $args{'objects'} || undef;
-	
-	# Make plain text Email::MIME object, we will never use this alone so we don't need the headers
-	my $plain_text_mime;
-	if ( exists($args{text_body}) ) {
-		my %text_body_attributes = ( (content_type=>'text/plain'), %{$args{text_body_attributes} || {}} );
-		$plain_text_mime = $class->create(
-			attributes => \%text_body_attributes,
-			body => $args{text_body},
-		);
-	}
-
-	# Parse the HTML and create a CID mapping for objects to embed
-	my $embedded_cids;
-	($html, $embedded_cids) = Email::MIME::CreateHTML::embed_objects($html, \%args);
-
-	# Create parts for each embedded object
-	my @html_mime_parts;
-	push @html_mime_parts, Email::MIME::CreateHTML::parts_for_objects($objects, \%args) if ($objects); 
-	push @html_mime_parts, Email::MIME::CreateHTML::parts_for_objects($embedded_cids, \%args) if(%$embedded_cids); 
-
-	# Create the mail
-	my $header = $args{header};
-	my %body_attributes = ( (content_type=>'text/html'), %{$args{body_attributes} || {}});
-	my $email = Email::MIME::CreateHTML::build_html_email($header, $html, \%body_attributes, \@html_mime_parts, $plain_text_mime);
-	return $email;
-}
+sub create_html { Email::MIME::CreateHTML::_create_html(@_, body_type_unknown => 1) }
 
 #Log::Trace stubs
 sub DUMP {}
@@ -251,14 +311,14 @@ Email::MIME::CreateHTML - Multipart HTML Email builder
 =head1 SYNOPSIS
 
 	use Email::MIME::CreateHTML;
-	my $email = Email::MIME->create_html(
+	my $email = Email::MIME::CreateHTML->create(
 		header => [
 			From => 'my@address',
 			To => 'your@address',
 			Subject => 'Here is the information you requested',
 		],
-		body => $html,
-		text_body => $plain_text
+		body_str => $html,
+		text_body_str => $plain_text
 	);
 
 	use Email::Send;
@@ -311,15 +371,26 @@ HTML with embedded objects, with text alternative
 
 =head1 METHODS
 
-There is only one method, which is installed into the Email::MIME package:
-
 =over 4
+
+=item Email::MIME::CreateHTML->create(%parameters)
+
+This method creates an Email::MIME object from a set of named parameters. Of
+these the C<header> is mandatory and C<body_str> or C<body> must be present. All
+others are optional. See the L</PARAMETERS> section for more information.
 
 =item Email::MIME->create_html(%parameters)
 
-This method creates an Email::MIME object from a set of named parameters.
-Of these the C<header> and C<body> parameters are mandatory and all others are optional.
-See the L</PARAMETERS> section for more information.
+This method is provided only for backwards compatibility. It accepts the C<body>
+parameter in either encoded octets or a decoded perl unicode string and tries to
+guess which it is. This can lead to corrupted emails. C<text_body> is required
+by this method to be an encoded octet sequence in either the charset configured
+in C<text_body_attributes>, C<body_attributes> or UTF-8.
+
+Please replace it with the call above.
+
+As it only exists to not break older uses of this module, not all the
+functionality documented under L</PARAMETERS> will work with this call.
 
 =back
 
@@ -357,9 +428,19 @@ Relevant options are:
 
 The meanings and defaults of these parameters are explained below.
 
+=item $email = build_html_str_email(\@headers, $html, \%body_attributes, \@html_mime_parts, $plain_text_mime)
+
+=item $email = build_html_raw_email(\@headers, $html, \%body_attributes, \@html_mime_parts, $plain_text_mime)
+
 =item $email = build_html_email(\@headers, $html, \%body_attributes, \@html_mime_parts, $plain_text_mime)
 
 The assembles a ready-to-send Email::MIME object (that can be sent with Email::Send).
+C<$plain_text_mime> is required to be an Email::MIME object.
+
+C<build_html_str_email> expects C<$html> to be a decoded perl unicode string.
+C<build_html_raw_email> expects C<$html> to be an encoded octet sequence.
+C<build_html_email> is provided for backwards compatibility reasons and will
+attempt to guess which of the previous two scalar types C<$html> is.
 
 =back
 
@@ -373,13 +454,20 @@ A list reference containing a set of headers to be created.
 If no Date header is specified, one will be provided for you based on the
 gmtime() of the local machine.
 
+=item body_str =E<gt> I<scalar>
+
 =item body =E<gt> I<scalar>
 
 A scalar value holding the HTML message body.
 
+C<body_str> expects a decoded perl unicode string.
+
+C<body> expects an encoded octed sequence. During email construction this will
+be decoded, using either the charset provided in C<body_attributes> or UTF-8.
+
 =item body_attributes =E<gt> I<hash reference>
 
-This is passed as the attributes parameter to the C<create> method (supplied by C<Email::MIME::Creator>) that creates the html part of the mail.
+This is passed as the attributes parameter to the C<Email::MIME->create> method that creates the html part of the mail.
 The body content-type will be set to C<text/html> unless it is overidden here.
 
 =item embed =E<gt> I<boolean>
@@ -442,13 +530,24 @@ This must support the following interface:
 
 Both the Cache and Cache::Cache distributions on CPAN conform to this.
 
+
+=item text_body_str =E<gt> I<scalar>
+
 =item text_body =E<gt> I<scalar>
 
 A scalar value holding the contents of an additional I<plain text> message body.
 
+C<text_body_str> expects a decoded perl unicode string.
+
+C<text_body> mirrors the behavior of the body string, that is if the body string
+is passed: via C<body_str>, C<text_body> is expected to be a decoded perl
+unicode string; via C<body>, C<text_body> is expected to be an encoded octet
+sequence in either the charset configured in C<text_body_attributes>,
+C<body_attributes> or UTF-8, depending on which of these parameters were given.
+
 =item text_body_attributes =E<gt> I<hash reference>
 
-This is passed as the attributes parameter to the C<create> method (supplied by C<Email::MIME::Creator>) that creates the plain text part of the mail.
+This is passed as the attributes parameter to the C<Email::MIME->create> method that creates the plain text part of the mail.
 The body Content-Type will be set to C<text/plain> unless it is overidden here.
 
 =back
@@ -481,36 +580,36 @@ You can override this using the C<embed_elements> parameter.
 
 This builds an HTML email:
 
-	my $email = Email::MIME->create_html(
+	my $email = Email::MIME::CreateHTML->create(
 		header => [
 			From => 'my@address',
 			To => 'your@address',
 			Subject => 'My speedy HTML',
 		],
-		body => $html
+		body_str => $html
 	);
 
 If you want a plaintext alternative, include the C<text_body> option:
 
-	my $email = Email::MIME->create_html(
+	my $email = Email::MIME::CreateHTML->create(
 		header => [
 			From => 'my@address',
 			To => 'your@address',
 			Subject => 'Here is the information you requested',
 		],
-		body => $html,
+		body_str => $html,
 		text_body => $plain_text #<--
 	);
 	
 If you want your images to remain as links (rather than be embedded in the email) disable the C<embed> option:
 
-	my $email = Email::MIME->create_html(
+	my $email = Email::MIME::CreateHTML->create(
 		header => [
 			From => 'my@address',
 			To => 'your@address',
 			Subject => 'My speedy HTML',
 		],
-		body => $html,
+		body_str => $html,
 		embed => 0 #<--
 	);
 
@@ -534,13 +633,13 @@ You then need to create a mapping of the Content IDs to object filenames:
 
 Finally you need to disable both the C<embed> and C<inline_css> options to turn off HTML parsing, and pass in your mapping: 
 	
-	my $quick_to_assemble_mime = Email::MIME->create_html(
+	my $quick_to_assemble_mime = Email::MIME::CreateHTML->create(
 		header => [
 			From => 'my@address',
 			To => 'your@address',
 			Subject => 'My speedy HTML',
 		],
-		body => $html,
+		body_str => $html,
 		embed => 0,          #<--
 		inline_css => 0,     #<--
 		objects => \%objects #<--
@@ -562,13 +661,13 @@ You can then reuse this and the CID mapping:
 		my $html = $template->process($newsletter);
 		
 		#Build MIME structure
-		my $mime = Email::MIME->create_html(
+		my $mime = Email::MIME::CreateHTML->create(
 			header => [
 				From => $reply_address,
 				To => $newsletter->address,
 				Subject => 'Weekly newsletter',
 			],
-			body => $html,
+			body_str => $html,
 			embed => 0,              #Already done
 			inline_css => 0,         #Already done
 			objects => $cid_mapping  #Here's one we prepared earlier
@@ -584,13 +683,13 @@ Note that one caveat with this approach is that all possible images that might b
 
 A custom resource resolver can be specified by passing your own object to resolver:
 
-	my $mime = Email::MIME->create_html(
+	my $mime = Email::MIME::CreateHTML->create(
 		header => [
 			From => 'my@address',
 			To => 'your@address',
 			Subject => 'Here is the information you requested',
 		],
-		body => $html,
+		body_str => $html,
 		base => 'http://internal.foo.co.uk/images/',
 		resolver => new MyResolver,         #<--
 	);
@@ -627,9 +726,9 @@ where:
 You can use a cache from the Cache::Cache distribution:
 	
 	use Cache::MemoryCache;
-	my $mime = Email::MIME->create_html(
+	my $mime = Email::MIME::CreateHTML->create(
 		header => \@headers,
-		body => $html,
+		body_str => $html,
 		object_cache => new Cache::MemoryCache( { 
 			'namespace' => 'MyNamespace',
 			'default_expires_in' => 600 
@@ -639,9 +738,9 @@ You can use a cache from the Cache::Cache distribution:
 Or a cache from the Cache distribution:
 	
 	use Cache::File;
-	my $mime = Email::MIME->create_html(
+	my $mime = Email::MIME::CreateHTML->create(
 		header => \@headers,
-		body => $html,
+		body_str => $html,
 		object_cache => Cache::File->new( 
 			cache_root => '/tmp/mycache',
 			default_expires => '600 sec'
@@ -650,9 +749,9 @@ Or a cache from the Cache distribution:
 
 Alternatively you can roll your own.  You just need to define an object with get and set methods:
 
-	my $mime = Email::MIME->create_html(
+	my $mime = Email::MIME::CreateHTML->create(
 		header => \@headers,
-		body => $html,
+		body_str => $html,
 		object_cache => new MyCache() 
 	);
 	
@@ -667,7 +766,7 @@ Alternatively you can roll your own.  You just need to define an object with get
 
 Perl Email Project L<http://pep.pobox.com>
 
-L<Email::Simple>, L<Email::MIME>, L<Email::Send>, L<Email::MIME::Creator>
+L<Email::Simple>, L<Email::MIME>, L<Email::Send>
 
 =head1 TODO
 
