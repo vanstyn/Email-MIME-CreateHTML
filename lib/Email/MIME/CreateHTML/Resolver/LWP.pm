@@ -66,9 +66,8 @@ sub get_resource {
 
 	#If we have a content-type header we can make a more informed guess at MIME type
 	if ($response->header('content-type')) {
-		$mimetype = $response->header('content-type');
+		$mimetype = $response->content_type;
 		TRACE("Content Type header: $mimetype");
-		$mimetype = $1 if($mimetype =~ /(\S+);\s*charset=(.*)$/); #strip down to just a MIME type
 	}
 	
 	#If all else fails then some conservative and general-purpose defaults are:
